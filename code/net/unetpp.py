@@ -38,10 +38,9 @@ class DoubleConv(nn.Module):
 #         return out
 
 class NestedUNet(nn.Module):
-    def __init__(self, args,in_channel,out_channel):
+    def __init__(self,in_channel,out_channel):
         super().__init__()
 
-        self.args = args
 
         nb_filter = [32, 64, 128, 256, 512]
 
@@ -68,13 +67,16 @@ class NestedUNet(nn.Module):
 
         self.conv0_4 = DoubleConv(nb_filter[0]*4+nb_filter[1], nb_filter[0])
         self.sigmoid = nn.Sigmoid()
-        if self.args.deepsupervision:
-            self.final1 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
-            self.final2 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
-            self.final3 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
-            self.final4 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
-        else:
-            self.final = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
+
+        # 默认不 deepsupervision
+        self.final = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
+        # if self.args.deepsupervision:
+        #     self.final1 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
+        #     self.final2 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
+        #     self.final3 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
+        #     self.final4 = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
+        # else:
+        #     self.final = nn.Conv2d(nb_filter[0], out_channel, kernel_size=1)
 
 
     def forward(self, input):
@@ -96,19 +98,36 @@ class NestedUNet(nn.Module):
         x2_2 = self.conv2_2(torch.cat([x2_0, x2_1, self.up(x3_1)], 1))
         x1_3 = self.conv1_3(torch.cat([x1_0, x1_1, x1_2, self.up(x2_2)], 1))
         x0_4 = self.conv0_4(torch.cat([x0_0, x0_1, x0_2, x0_3, self.up(x1_3)], 1))
+        
+        output = self.final(x0_4)
+        output = self.sigmoid(output)
+        lsoutput = []
+        for item in output:
+            lsoutput.append(item.reshape(1,3,256,256))
+        return torch.cat(lsoutput)
+        # # 默认 deepsupervision
+        # output1 = self.final1(x0_1)
+        # output1 = self.sigmoid(output1)
+        # output2 = self.final2(x0_2)
+        # output2 = self.sigmoid(output2)
+        # output3 = self.final3(x0_3)
+        # output3 = self.sigmoid(output3)
+        # output4 = self.final4(x0_4)
+        # output4 = self.sigmoid(output4)
+        # return [output1, output2, output3, output4]
+        
+        # if self.args.deepsupervision:
+        #     output1 = self.final1(x0_1)
+        #     output1 = self.sigmoid(output1)
+        #     output2 = self.final2(x0_2)
+        #     output2 = self.sigmoid(output2)
+        #     output3 = self.final3(x0_3)
+        #     output3 = self.sigmoid(output3)
+        #     output4 = self.final4(x0_4)
+        #     output4 = self.sigmoid(output4)
+        #     return [output1, output2, output3, output4]
 
-        if self.args.deepsupervision:
-            output1 = self.final1(x0_1)
-            output1 = self.sigmoid(output1)
-            output2 = self.final2(x0_2)
-            output2 = self.sigmoid(output2)
-            output3 = self.final3(x0_3)
-            output3 = self.sigmoid(output3)
-            output4 = self.final4(x0_4)
-            output4 = self.sigmoid(output4)
-            return [output1, output2, output3, output4]
-
-        else:
-            output = self.final(x0_4)
-            output = self.sigmoid(output)
-            return output
+        # else:
+        #     output = self.final(x0_4)
+        #     output = self.sigmoid(output)
+        #     return output
