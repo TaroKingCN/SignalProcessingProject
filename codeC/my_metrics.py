@@ -19,6 +19,14 @@ def jc(result, reference):
     
     return jc
 
+
+def dc(target,predictive,ep=1e-8):
+    intersection = 2 * torch.sum(predictive * target) + ep
+    union = torch.sum(predictive) + torch.sum(target) + ep
+    loss = 1 - intersection / union
+    return loss
+
+'''
 def dc(result, reference):
     #Dice coefficient
     
@@ -40,7 +48,7 @@ def dc(result, reference):
         dc = 0.0
     
     return dc
-
+'''
 def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
     """
     The distances between the surface voxel of binary objects in result and their
@@ -173,6 +181,7 @@ def calculate_metrics(pred, target):
     '''
         a function designed to calculate a group of metrics
     '''
+    dice = dc(pred,target)
     if torch.is_tensor(pred):
         pred = pred.data.cpu().numpy()
     if torch.is_tensor(target):
@@ -185,7 +194,6 @@ def calculate_metrics(pred, target):
     threshold1 = temp1/255
     global threshold2
     threshold2 = temp2/255
-    dice = dc(pred,target)
     jaccard = jc(pred,target)
     hd95_score = hd95(pred,target)
     assd_score = assd(pred,target)

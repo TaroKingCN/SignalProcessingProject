@@ -92,12 +92,13 @@ transform=transforms.Compose([
 ])
 class MyDataset(Dataset):
 
-    def __init__(self,data_file = None, mask_files = None,data_folder_path = None, mask_folder_path = None):
+    def __init__(self,data_file = None, mask_files = None,data_folder_path = None, mask_folder_path = None, test_flag = False):
         super(MyDataset).__init__()
         self.data_file = data_file
         self.mask_files = mask_files
         self.data_folder_path = data_folder_path
         self.mask_folder_path = mask_folder_path
+        self.test_flag = test_flag
 
     
     def __len__(self):
@@ -112,4 +113,6 @@ class MyDataset(Dataset):
         segemnt_im = cv2.imread(os.path.join(self.mask_folder_path,mname),cv2.IMREAD_GRAYSCALE)
         # segemnt_im = cv2.equalizeHist(segemnt_im)
         #对灰度值进行归一化
+        if self.test_flag:
+            return transform(im/255).float(),transform(segemnt_im/255).float(),fname
         return transform(im/255).float(),transform(segemnt_im/255).float()
